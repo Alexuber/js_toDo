@@ -8,15 +8,22 @@
 // check localStorage on already having data
 // insert data from localStorage on our page
 import { v4 as uuidv4 } from 'uuid';
+import './scss/main.scss';
 
 const form = document.querySelector('form');
 const valueEl = document.querySelector('.input-value');
 const toDoListEl = document.querySelector('.todo-list');
+const toDoListItem = document.querySelectorAll('.todo_item');
 
-const arrTasks = [];
+updateMarkupFromLocalStorage();
+let arrTasks = checkLocalStorage();
 
-function handleSubmitForm(e) {
-  e.preventDefault();
+form.addEventListener('submit', onSubmit);
+toDoListEl.addEventListener('click', todoAction);
+let selectedTask;
+
+function onSubmit(event) {
+  event.preventDefault();
   const inputValue = valueEl.value;
   const task = {
     id: uuidv4(),
@@ -26,27 +33,71 @@ function handleSubmitForm(e) {
   };
   arrTasks.push(task);
   localStorage.setItem('data', JSON.stringify(arrTasks));
-
-  updateMarkup();
+  updateMarkupFromLocalStorage();
+  valueEl.value = '';
 }
 
-form.addEventListener('submit', handleSubmitForm);
-
-function updateMarkup() {
-  let markup;
-
+function updateMarkupFromLocalStorage() {
+  let markUp;
   if (localStorage.length === 0) {
-    markup = `<li class="list__item">
-        <p class="list__desc">You dont have deals</p>
-      </li>`;
+    markUp = `<li class="todo_item">
+  <p class= "item_text">У вас не має справ</p>
+</li>`;
   } else {
     let data = JSON.parse(localStorage.getItem('data'));
-    //     const markup = `<li class="list__item">
-    //   <p class="list__desc">All good</p>
-    //   <button class="done-btn">Done</button>
-    //   <button class="edit-btn">Edit</button>
-    //   <button class="delete-btn">Delete</button>
-    // </li>`;
+    markUp = data
+      .map(
+        item => `<li class="todo_item" data-id=${item.id}>
+  <p class= "item_text" >${item.text}</p>
+  <button class='edit'>✏️</button>
+  <button class='success'>✅</button>
+  <button class='delete' data-id=${item.id}>❌</button>
+</li>`
+      )
+      .join('');
   }
-  toDoListEl.innertHTML('beforeend', markup);
+  toDoListEl.innerHTML = markUp;
+}
+
+function checkLocalStorage() {
+  if (localStorage.getItem('data')) {
+    return JSON.parse(localStorage.getItem('data'));
+  } else {
+    return [];
+  }
+}
+
+function todoAction(event) {
+  if (event.target.classList.contains('delete')) {
+    arrTasks = arrTasks.filter(
+      item => item.id !== event.target.parentNode.dataset.id
+    );
+    localStorage.setItem('data', JSON.stringify(arrTasks));
+    updateMarkupFromLocalStorage();
+  } else if (event.target.classList.contains('edit')) {
+    valueEl.value = event.target.parentNode.firstElementChild.textContent;
+    form.lastElementChild.value = 'Відредагувати';
+    selectedTask = arrTasks.find(
+      item => item.id === event.target.parentNode.dataset.id
+    );
+    form.removeEventListener('submit', onSubmit);
+    form.addEventListener('submit', onEdit);
+  } else if (event.target.classList.contains('success')) {
+    console.log(event.target.parentNode.dataset.id);
+  } else {
+    return;
+  }
+}
+
+function onEdit(event) {
+  event.preventDefault();
+  selectedTask.text = valueEl.value;
+  const indexOfSelectedTask = arrTasks.indexOf(selectedTask);
+  arrTasks.splice(indexOfSelectedTask, 1, selectedTask);
+  localStorage.setItem('data', JSON.stringify(arrTasks));
+  updateMarkupFromLocalStorage();
+  valueEl.value = '';
+  form.removeEventListener('submit', onEdit);
+  form.addEventListener('submit', onSubmit);
+  form.lastElementChild.value = 'Додати в список';
 }
