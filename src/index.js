@@ -1,19 +1,10 @@
-// можливість додавати справи
-// можливість редагувати текст
-// можливість видалення
-// можл-ть фільтрації
-// можл-ть надати статус "виконано"
-// можл-ть встановити пріоритет
-// saving
-// check localStorage on already having data
-// insert data from localStorage on our page
 import { v4 as uuidv4 } from 'uuid';
 import './scss/main.scss';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
 const form = document.querySelector('form');
 const valueEl = document.querySelector('.input-value');
 const toDoListEl = document.querySelector('.todo-list');
-const toDoListItem = document.querySelectorAll('.todo_item');
 
 updateMarkupFromLocalStorage();
 let arrTasks = checkLocalStorage();
@@ -24,21 +15,28 @@ let selectedTask;
 
 function onSubmit(event) {
   event.preventDefault();
-  const inputValue = valueEl.value;
-  const task = {
-    id: uuidv4(),
-    priority: 'standart',
-    status: 'in progress',
-    text: inputValue,
-  };
-  arrTasks.push(task);
-  localStorage.setItem('data', JSON.stringify(arrTasks));
-  updateMarkupFromLocalStorage();
-  valueEl.value = '';
+  const inputValue = valueEl.value.trim();
+
+  if (inputValue === '') {
+    Notify.warning('Please type your Todo!');
+  } else {
+    const task = {
+      id: uuidv4(),
+      priority: 'standart',
+      status: 'in progress',
+      text: inputValue,
+    };
+    arrTasks.push(task);
+    localStorage.setItem('data', JSON.stringify(arrTasks));
+    updateMarkupFromLocalStorage();
+    Notify.success('Successfully added!');
+    valueEl.value = '';
+  }
 }
 
 function updateMarkupFromLocalStorage() {
   let markUp;
+
   if (localStorage.length === 0) {
     markUp = `<li class="todo_item">
   <p class= "item_text">У вас не має справ</p>
@@ -49,9 +47,9 @@ function updateMarkupFromLocalStorage() {
       .map(
         item => `<li class="todo_item" data-id=${item.id}>
   <p class= "item_text" >${item.text}</p>
-  <button class='edit'>✏️</button>
-  <button class='success'>✅</button>
-  <button class='delete' data-id=${item.id}>❌</button>
+  <button class='edit control'>✏️</button>
+  <button class='success control'>✅</button>
+  <button class='delete control' data-id=${item.id}>❌</button>
 </li>`
       )
       .join('');
@@ -73,6 +71,7 @@ function todoAction(event) {
       item => item.id !== event.target.parentNode.dataset.id
     );
     localStorage.setItem('data', JSON.stringify(arrTasks));
+    Notify.success('Successfully deleted!');
     updateMarkupFromLocalStorage();
   } else if (event.target.classList.contains('edit')) {
     valueEl.value = event.target.parentNode.firstElementChild.textContent;
@@ -83,7 +82,9 @@ function todoAction(event) {
     form.removeEventListener('submit', onSubmit);
     form.addEventListener('submit', onEdit);
   } else if (event.target.classList.contains('success')) {
-    console.log(event.target.parentNode.dataset.id);
+    const currentId = event.target.parentNode.dataset.id;
+    const currentItemEl = document.querySelector(`[data-id='${currentId}']`);
+    currentItemEl.classList.toggle('status');
   } else {
     return;
   }
@@ -100,4 +101,5 @@ function onEdit(event) {
   form.removeEventListener('submit', onEdit);
   form.addEventListener('submit', onSubmit);
   form.lastElementChild.value = 'Додати в список';
+  Notify.success('Successfully edited!');
 }
